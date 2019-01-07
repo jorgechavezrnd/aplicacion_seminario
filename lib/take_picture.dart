@@ -39,20 +39,24 @@ class _TakePictureState extends State<TakePicture> {
       });
     }
 
-    socketIO = SocketIOManager().createSocketIO("http://10.0.0.17:3000", "/", query: '');
+    /* socketIO = SocketIOManager().createSocketIO("http://10.0.0.17:3000", "/", query: '');
 
     socketIO.init();
 
     socketIO.subscribe("message", (data){ print('FUNCIONA!!!!!!!'); print(data); });
 
-    socketIO.connect();
+    socketIO.connect(); */
   }
 
   void pushStudentsDetails(BuildContext context) {
+    socketIO = SocketIOManager().createSocketIO(serverUrl, serverNamespace, query: serverQuery);
+    socketIO.init();
+    socketIO.connect();
+
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => StudentDetails(image: this.image)
+        builder: (context) => StudentDetails(image: this.image, socketIO: this.socketIO)
       )
     );
   }
@@ -86,8 +90,8 @@ class _TakePictureState extends State<TakePicture> {
           children: <Widget>[
             FloatingActionButton(
                 heroTag: 1,
-                // onPressed: () => takePicture('camera'),
-                onPressed: () => this.sendImage(),
+                onPressed: () => takePicture('camera'),
+                // onPressed: () => this.sendImage(),
                 child: Icon(Icons.camera_alt)),
             FloatingActionButton(
                 heroTag: 2,

@@ -1,19 +1,21 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_socket_io/flutter_socket_io.dart';
+import 'package:aplicacion_seminario/models/student_model.dart';
+import 'dart:io';
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
-import 'dart:io';
-import 'package:aplicacion_seminario/models/student_model.dart';
-
-//const apiUrl = 'http://192.168.133.129:8080/compare';
-const apiUrl = 'http://192.168.133.129:3000/api/upload';
-//const pictureUrl = 'assets/img/nobody.jpg';
-const pictureUrl = 'http://192.168.133.129:3000/image1.png';
+const serverUrl = 'http://10.0.0.17:3000';
+const serverNamespace = '/';
+const serverQuery = '';
+// const pictureUrl = '$serverUrl/image1.png';
+const pictureUrl = 'assets/img/nobody.jpg';
 
 class StudentDetails extends StatefulWidget {
 
   File image;
+  SocketIO socketIO;
 
-  StudentDetails({ this.image });
+  StudentDetails({ this.image, this.socketIO });
 
   @override
   _StudentDetailsState createState() {
@@ -23,11 +25,13 @@ class StudentDetails extends StatefulWidget {
 }
 
 class _StudentDetailsState extends State<StudentDetails> {
-  dynamic response;
   List<StudentModel> students;
 
   @override
   void initState() {
+    widget.socketIO.subscribe('detected_faces', _onDetectedFaces);
+    widget.socketIO.subscribe('recognized_faces', _onRecognizedFaces);
+
     super.initState();
     this.sendImage();
   }
@@ -57,7 +61,43 @@ class _StudentDetailsState extends State<StudentDetails> {
     })).catchError((error) => print(error));
   }*/
 
-  void sendImage() async {
+  _onDetectedFaces(dynamic data) {
+    var dataJson = jsonDecode(data);
+    print('${dataJson["numberOfFaces"]} FACES DETECTED!!!!!!!!!!!!!!');
+  }
+
+  _onRecognizedFaces(dynamic data) {
+    var dataJson = jsonDecode(data);
+
+    print('RECOGNIZED FACES!!!!!!!!!!!!!');
+    print(data.toString());
+
+    setState(() {
+      this.students = new List();
+      
+      int tam = dataJson['present'].length;
+
+      for (int i = 0; i < tam; ++i) {
+        String name = dataJson['present'][i];
+        print('Student $i : $name');
+        this.students.add(StudentModel(name: name, pictureUrl: pictureUrl));
+      }
+
+      widget.socketIO.disconnect();
+      widget.socketIO.destroy();      
+    });
+  }
+
+  void sendImage() {
+    List<int> imageBytes = widget.image.readAsBytesSync();
+    String base64Image = base64Encode(imageBytes);
+
+    print('Send Image');
+    
+    widget.socketIO.sendMessage('upload', '{"image": "$base64Image"}');
+  }
+
+  /* void sendImage() async {
     print('Send Image');
 
     List<int> imageBytes = widget.image.readAsBytesSync();
@@ -86,7 +126,7 @@ class _StudentDetailsState extends State<StudentDetails> {
         this.students.add(StudentModel(name: name, pictureUrl: pictureUrl));
       }
     });
-  }
+  } */
 
   @override
   Widget build(BuildContext context) {
@@ -108,8 +148,8 @@ class _StudentDetailsState extends State<StudentDetails> {
               leading: CircleAvatar(
                 foregroundColor: Theme.of(context).primaryColor,
                 backgroundColor: Colors.grey,
-                // backgroundImage: AssetImage(this.students[i].pictureUrl),
-                backgroundImage: NetworkImage(pictureUrl),
+                backgroundImage: AssetImage(this.students[i].pictureUrl),
+                // backgroundImage: NetworkImage(pictureUrl),
               ),
               title: Text(
                 this.students[i].name,
