@@ -61,13 +61,28 @@ class _StudentDetailsState extends State<StudentDetails> {
     })).catchError((error) => print(error));
   }*/
 
+  String _getJsonString(String data) {
+    if (data[0] == '[') {
+      var dataFix = jsonDecode(data);
+      String dataString = dataFix[0];
+      return dataString;
+    } else {
+      return data;
+    }
+  }
+
   _onDetectedFaces(dynamic data) {
-    var dataJson = jsonDecode(data);
+    dynamic dataFix = _getJsonString(data);
+
+    var dataJson = jsonDecode(dataFix);
+    
     print('${dataJson["numberOfFaces"]} FACES DETECTED!!!!!!!!!!!!!!');
   }
 
   _onRecognizedFaces(dynamic data) {
-    var dataJson = jsonDecode(data);
+    dynamic dataFix = _getJsonString(data);
+
+    var dataJson = jsonDecode(dataFix);
 
     print('RECOGNIZED FACES!!!!!!!!!!!!!');
     print(data.toString());
