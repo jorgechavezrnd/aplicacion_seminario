@@ -1,4 +1,3 @@
-import 'package:aplicacion_seminario/util/dialogs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_socket_io/flutter_socket_io.dart';
 import 'package:aplicacion_seminario/models/student_model.dart';
@@ -6,12 +5,12 @@ import 'dart:io';
 import 'dart:convert';
 
 // const serverUrl = 'http://10.0.0.17:3000';
-const serverUrl = 'http://192.168.133.129:3000';
-// const serverUrl = 'https://servidorseminario.herokuapp.com/';
+// const serverUrl = 'http://192.168.133.129:3000';
+const serverUrl = 'https://servidorseminario.herokuapp.com/';
 const serverNamespace = '/';
 const serverQuery = '';
 // const pictureUrl = '$serverUrl/image1.png';
-const pictureUrl = 'assets/img/nobody.jpg';
+// const pictureUrl = 'assets/img/nobody.jpg';
 
 class StudentDetails extends StatefulWidget {
 
@@ -29,14 +28,16 @@ class StudentDetails extends StatefulWidget {
 
 class _StudentDetailsState extends State<StudentDetails> {
   List<StudentModel> students;
-  String estado = 'detectando_caras';
-  int cantidad_caras_detectadas = 0;
-  Dialogs dialogs = new Dialogs();
+  // String estado = 'detectando_caras';
+  String estado = 'enviando_imagen';
+  int cantidadCarasDetectadas = 0;
+  String urlDeImagen;
 
   @override
   void initState() {
     widget.socketIO.subscribe('detected_faces', _onDetectedFaces);
     widget.socketIO.subscribe('recognized_faces', _onRecognizedFaces);
+    widget.socketIO.subscribe('received_image', _onReceivedImage);
 
     super.initState();
     this.sendImage();
@@ -60,7 +61,7 @@ class _StudentDetailsState extends State<StudentDetails> {
     print('${dataJson["numberOfFaces"]} FACES DETECTED!!!!!!!!!!!!!!');
     
     setState(() {
-      cantidad_caras_detectadas = int.parse(dataJson["numberOfFaces"]);
+      cantidadCarasDetectadas = int.parse(dataJson["numberOfFaces"]);
       estado = 'comparando_caras';
     });
   }
@@ -79,15 +80,27 @@ class _StudentDetailsState extends State<StudentDetails> {
       int tam = dataJson['present'].length;
 
       for (int i = 0; i < tam; ++i) {
-        String name = dataJson['present'][i];
+        String name = dataJson['present'][i]['name'];
+        String pictureUrl = '$serverUrl/${dataJson['present'][i]['pictureUrl']}';
         print('Student $i : $name');
         this.students.add(StudentModel(name: name, pictureUrl: pictureUrl));
       }
 
-      widget.socketIO.disconnect();
       widget.socketIO.destroy();
 
       estado = 'proceso_terminado';
+    });
+  }
+
+  _onReceivedImage(dynamic data) {
+    dynamic dataFix = _getJsonString(data);
+    var dataJson = jsonDecode(dataFix);
+
+    print('IMAGEN RECIVIDA EN SERVIDOR');
+
+    setState(() {
+      this.urlDeImagen = "$serverUrl/${dataJson['imageName']}";
+      this.estado = 'detectando_caras';
     });
   }
 
@@ -100,16 +113,27 @@ class _StudentDetailsState extends State<StudentDetails> {
     widget.socketIO.sendMessage('upload', '{"image": "$base64Image"}');
   }
 
-  void showWaitingDialog(context) async {
-    dialogs.waiting(context, 'Titulo', '$cantidad_caras_detectadas caras detectadas');
-    await Future.delayed(Duration(seconds: 2));
-    Navigator.pop(context);
-  }
-
   Widget buildBody(context) {
     switch (estado) {
-      case 'detectando_caras':
+      case 'enviando_imagel':
         return Center(child: CircularProgressIndicator());
+      case 'detectando_caras':
+        return AlertDialog(
+          title: Center(
+            child: Text('Procesando Imagen')
+          ),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Image.network(this.urlDeImagen),
+                Padding(
+                    padding: EdgeInsets.only(top: 12.0),
+                    child: Center(child: CircularProgressIndicator())
+                )
+              ],
+            ),
+          ),
+        );
       case 'comparando_caras':
         return AlertDialog(
           title: Center(
@@ -118,7 +142,7 @@ class _StudentDetailsState extends State<StudentDetails> {
           content: SingleChildScrollView(
             child: ListBody(
               children: <Widget>[
-                Center(child: Text('Se detectaron $cantidad_caras_detectadas caras')),
+                Center(child: Text('Se detectaron $cantidadCarasDetectadas caras')),
                 Padding(
                     padding: EdgeInsets.only(top: 12.0),
                     child: Center(child: CircularProgressIndicator())
@@ -139,8 +163,8 @@ class _StudentDetailsState extends State<StudentDetails> {
               leading: CircleAvatar(
                 foregroundColor: Theme.of(context).primaryColor,
                 backgroundColor: Colors.grey,
-                backgroundImage: AssetImage(this.students[i].pictureUrl),
-                // backgroundImage: NetworkImage(pictureUrl),
+                // backgroundImage: AssetImage(this.students[i].pictureUrl),
+                backgroundImage: NetworkImage(this.students[i].pictureUrl),
               ),
               title: Text(
                 this.students[i].name,
