@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_socket_io/flutter_socket_io.dart';
 import 'package:aplicacion_seminario/models/student_model.dart';
+import 'package:aplicacion_seminario/pages/missing_students_page.dart';
+import 'package:aplicacion_seminario/pages/present_students_page.dart';
 import 'dart:io';
 import 'dart:convert';
 
 // const serverUrl = 'http://10.0.0.17:3000';
-// const serverUrl = 'http://192.168.133.129:3000';
-const serverUrl = 'https://servidorseminario.herokuapp.com/';
+const serverUrl = 'http://192.168.133.129:3000';
+// const serverUrl = 'https://servidorseminario.herokuapp.com/';
 const serverNamespace = '/';
 const serverQuery = '';
 // const pictureUrl = '$serverUrl/image1.png';
@@ -26,12 +28,13 @@ class StudentDetails extends StatefulWidget {
 
 }
 
-class _StudentDetailsState extends State<StudentDetails> {
-  List<StudentModel> students;
-  // String estado = 'detectando_caras';
+class _StudentDetailsState extends State<StudentDetails> with SingleTickerProviderStateMixin {
+  List<StudentModel> presentStudents;
+  List<StudentModel> missingStudents;
   String estado = 'enviando_imagen';
   int cantidadCarasDetectadas = 0;
   String urlDeImagen;
+  TabController _tabController;
 
   @override
   void initState() {
@@ -41,6 +44,8 @@ class _StudentDetailsState extends State<StudentDetails> {
 
     super.initState();
     this.sendImage();
+
+    _tabController = new TabController(vsync: this, initialIndex: 0, length: 2);
   }
 
   String _getJsonString(String data) {
@@ -75,15 +80,25 @@ class _StudentDetailsState extends State<StudentDetails> {
     print(data.toString());
 
     setState(() {
-      this.students = new List();
+      this.presentStudents = new List();
+      this.missingStudents = new List();
 
       int tam = dataJson['present'].length;
 
       for (int i = 0; i < tam; ++i) {
         String name = dataJson['present'][i]['name'];
         String pictureUrl = '$serverUrl/${dataJson['present'][i]['pictureUrl']}';
-        print('Student $i : $name');
-        this.students.add(StudentModel(name: name, pictureUrl: pictureUrl));
+        print('Present Student $i : $name');
+        this.presentStudents.add(StudentModel(name: name, pictureUrl: pictureUrl));
+      }
+
+      int tam2 = dataJson['missing'].length;
+
+      for (int i = 0; i < tam2; ++i) {
+        String name = dataJson['missing'][i]['name'];
+        String pictureUrl = '$serverUrl/${dataJson['missing'][i]['pictureUrl']}';
+        print('Missing Student $i : $name');
+        this.missingStudents.add(StudentModel(name: name, pictureUrl: pictureUrl));
       }
 
       widget.socketIO.destroy();
@@ -152,28 +167,13 @@ class _StudentDetailsState extends State<StudentDetails> {
           ),
         );
       case 'proceso_terminado':
-        return ListView.builder(
-        itemCount: this.students.length,
-        itemBuilder: (context, i) => Column(
+        return TabBarView(
+          controller: _tabController,
           children: <Widget>[
-            Divider(
-              height: 10.0,
-            ),
-            ListTile(
-              leading: CircleAvatar(
-                foregroundColor: Theme.of(context).primaryColor,
-                backgroundColor: Colors.grey,
-                // backgroundImage: AssetImage(this.students[i].pictureUrl),
-                backgroundImage: NetworkImage(this.students[i].pictureUrl),
-              ),
-              title: Text(
-                this.students[i].name,
-                style: TextStyle(fontWeight: FontWeight.bold)
-              )
-            )
+            PresentStudentsPage(presentStudents: this.presentStudents),
+            MissingStudentsPage(missingStudents: this.missingStudents)
           ],
-        ),
-      );
+        );
       default:
         return Center(child: Text('NO DEBERIA LLEGAR AQUI'));
     }
@@ -184,10 +184,18 @@ class _StudentDetailsState extends State<StudentDetails> {
     return Scaffold(
       appBar: AppBar(
         title: Center(
-          child: Text('Estudiantes presentes'),
+          child: Text('CONTROL DE ASISTENCIA'),
+        ),
+        elevation: 0.7,
+        bottom: estado != 'proceso_terminado' ? null : TabBar(
+          controller: _tabController,
+          indicatorColor: Colors.white,
+          tabs: <Widget>[
+            Tab(text: 'PRESENTES'),
+            Tab(text: 'FALTANTES')
+          ],
         ),
       ),
-      //body: response == null ? Center(child: CircularProgressIndicator()) : Text(this.response.data['students'].toString())
       body: buildBody(context)
     );
   }
