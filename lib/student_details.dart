@@ -7,8 +7,8 @@ import 'dart:io';
 import 'dart:convert';
 
 // const serverUrl = 'http://10.0.0.17:3000';
-const serverUrl = 'http://192.168.133.129:3000';
-// const serverUrl = 'https://servidorseminario.herokuapp.com/';
+// const serverUrl = 'http://192.168.133.129:3000';
+const serverUrl = 'https://servidorseminario.herokuapp.com/';
 const serverNamespace = '/';
 const serverQuery = '';
 // const pictureUrl = '$serverUrl/image1.png';
