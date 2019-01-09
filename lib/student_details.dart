@@ -111,8 +111,6 @@ class _StudentDetailsState extends State<StudentDetails> with SingleTickerProvid
     dynamic dataFix = _getJsonString(data);
     var dataJson = jsonDecode(dataFix);
 
-    print('IMAGEN RECIVIDA EN SERVIDOR');
-
     setState(() {
       this.urlDeImagen = "$serverUrl/${dataJson['imageName']}";
       this.estado = 'detectando_caras';
@@ -122,16 +120,28 @@ class _StudentDetailsState extends State<StudentDetails> with SingleTickerProvid
   void sendImage() {
     List<int> imageBytes = widget.image.readAsBytesSync();
     String base64Image = base64Encode(imageBytes);
-
-    print('Send Image');
     
     widget.socketIO.sendMessage('upload', '{"image": "$base64Image"}');
   }
 
   Widget buildBody(context) {
     switch (estado) {
-      case 'enviando_imagel':
-        return Center(child: CircularProgressIndicator());
+      case 'enviando_imagen':
+        return AlertDialog(
+          title: Center(
+            child: Text('ENVIANDO IMAGEN')
+          ),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Padding(
+                    padding: EdgeInsets.only(top: 12.0),
+                    child: Center(child: CircularProgressIndicator())
+                )
+              ],
+            ),
+          ),
+        );
       case 'detectando_caras':
         return AlertDialog(
           title: Center(

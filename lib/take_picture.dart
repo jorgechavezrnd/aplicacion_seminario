@@ -4,7 +4,6 @@ import 'package:flutter_socket_io/flutter_socket_io.dart';
 import 'package:flutter_socket_io/socket_io_manager.dart';
 import 'package:aplicacion_seminario/student_details.dart';
 import 'dart:io';
-import 'dart:convert';
 
 class TakePicture extends StatefulWidget {
   @override
@@ -39,35 +38,18 @@ class _TakePictureState extends State<TakePicture> {
       });
     }
 
-    /* socketIO = SocketIOManager().createSocketIO("http://10.0.0.17:3000", "/", query: '');
-
-    socketIO.init();
-
-    socketIO.subscribe("message", (data){ print('FUNCIONA!!!!!!!'); print(data); });
-
-    socketIO.connect(); */
-  }
-
-  void pushStudentsDetails(BuildContext context) {
     socketIO = SocketIOManager().createSocketIO(serverUrl, serverNamespace, query: serverQuery);
     socketIO.init();
     socketIO.connect();
+  }
 
+  void pushStudentsDetails(BuildContext context) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => StudentDetails(image: this.image, socketIO: this.socketIO)
       )
     );
-  }
-
-  void sendImage() {
-    List<int> imageBytes = this.image.readAsBytesSync();
-    String base64Image = base64Encode(imageBytes);
-
-    socketIO.sendMessage('upload', '{"image": "$base64Image"}', (){});
-
-    socketIO.disconnect();
   }
 
   @override
@@ -91,7 +73,6 @@ class _TakePictureState extends State<TakePicture> {
             FloatingActionButton(
                 heroTag: 1,
                 onPressed: () => takePicture('camera'),
-                // onPressed: () => this.sendImage(),
                 child: Icon(Icons.camera_alt)),
             FloatingActionButton(
                 heroTag: 2,
