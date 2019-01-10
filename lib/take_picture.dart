@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:flutter_socket_io/flutter_socket_io.dart';
-import 'package:flutter_socket_io/socket_io_manager.dart';
 import 'package:aplicacion_seminario/student_details.dart';
 import 'dart:io';
 
@@ -14,7 +12,6 @@ class TakePicture extends StatefulWidget {
 
 class _TakePictureState extends State<TakePicture> {
   File image;
-  SocketIO socketIO;
 
   void takePicture(String source) async {
     ImageSource imageSource;
@@ -37,17 +34,13 @@ class _TakePictureState extends State<TakePicture> {
         });
       });
     }
-
-    socketIO = SocketIOManager().createSocketIO(serverUrl, serverNamespace, query: serverQuery);
-    socketIO.init();
-    socketIO.connect();
   }
 
   void pushStudentsDetails(BuildContext context) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => StudentDetails(image: this.image, socketIO: this.socketIO)
+        builder: (context) => StudentDetails(image: this.image)
       )
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_socket_io/flutter_socket_io.dart';
+import 'package:flutter_socket_io/socket_io_manager.dart';
 import 'package:aplicacion_seminario/models/student_model.dart';
 import 'package:aplicacion_seminario/pages/missing_students_page.dart';
 import 'package:aplicacion_seminario/pages/present_students_page.dart';
@@ -17,9 +18,8 @@ const serverQuery = '';
 class StudentDetails extends StatefulWidget {
 
   File image;
-  SocketIO socketIO;
 
-  StudentDetails({ this.image, this.socketIO });
+  StudentDetails({ this.image });
 
   @override
   _StudentDetailsState createState() {
@@ -31,19 +31,23 @@ class StudentDetails extends StatefulWidget {
 class _StudentDetailsState extends State<StudentDetails> with SingleTickerProviderStateMixin {
   List<StudentModel> presentStudents;
   List<StudentModel> missingStudents;
-  String estado = 'enviando_imagen';
+  String estado = 'conectando_servidor';
   int cantidadCarasDetectadas = 0;
-  String urlDeImagen;
   TabController _tabController;
+  SocketIO socketIO;
 
   @override
   void initState() {
-    widget.socketIO.subscribe('detected_faces', _onDetectedFaces);
-    widget.socketIO.subscribe('recognized_faces', _onRecognizedFaces);
-    widget.socketIO.subscribe('received_image', _onReceivedImage);
+    socketIO = SocketIOManager().createSocketIO(serverUrl, serverNamespace, query: serverQuery);
+    socketIO.init();
+    socketIO.connect();
+
+    socketIO.subscribe('detected_faces', _onDetectedFaces);
+    socketIO.subscribe('recognized_faces', _onRecognizedFaces);
+    socketIO.subscribe('received_image', _onReceivedImage);
+    socketIO.subscribe('server_connected', _onServerConnected);
 
     super.initState();
-    this.sendImage();
 
     _tabController = new TabController(vsync: this, initialIndex: 0, length: 2);
   }
@@ -101,19 +105,22 @@ class _StudentDetailsState extends State<StudentDetails> with SingleTickerProvid
         this.missingStudents.add(StudentModel(name: name, pictureUrl: pictureUrl));
       }
 
-      widget.socketIO.destroy();
+      socketIO.destroy();
 
       estado = 'proceso_terminado';
     });
   }
 
   _onReceivedImage(dynamic data) {
-    dynamic dataFix = _getJsonString(data);
-    var dataJson = jsonDecode(dataFix);
-
     setState(() {
-      this.urlDeImagen = "$serverUrl/${dataJson['imageName']}";
       this.estado = 'detectando_caras';
+    });
+  }
+
+  _onServerConnected(dynamic data) {
+    setState(() {
+      this.estado = 'enviando_imagen';
+      sendImage();
     });
   }
 
@@ -121,11 +128,27 @@ class _StudentDetailsState extends State<StudentDetails> with SingleTickerProvid
     List<int> imageBytes = widget.image.readAsBytesSync();
     String base64Image = base64Encode(imageBytes);
     
-    widget.socketIO.sendMessage('upload', '{"image": "$base64Image"}');
+    socketIO.sendMessage('upload', '{"image": "$base64Image"}');
   }
 
   Widget buildBody(context) {
     switch (estado) {
+      case 'conectando_servidor':
+        return AlertDialog(
+          title: Center(
+            child: Text('CONECTANDO SERVIDOR')
+          ),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Padding(
+                    padding: EdgeInsets.only(top: 12.0),
+                    child: Center(child: CircularProgressIndicator())
+                )
+              ],
+            ),
+          ),
+        );
       case 'enviando_imagen':
         return AlertDialog(
           title: Center(
@@ -145,12 +168,12 @@ class _StudentDetailsState extends State<StudentDetails> with SingleTickerProvid
       case 'detectando_caras':
         return AlertDialog(
           title: Center(
-            child: Text('Procesando Imagen')
+            child: Text('PROCESANDO IMAGEN')
           ),
           content: SingleChildScrollView(
             child: ListBody(
               children: <Widget>[
-                Image.network(this.urlDeImagen),
+                Image.file(widget.image),
                 Padding(
                     padding: EdgeInsets.only(top: 12.0),
                     child: Center(child: CircularProgressIndicator())
