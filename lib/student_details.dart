@@ -190,7 +190,7 @@ class _StudentDetailsState extends State<StudentDetails> with SingleTickerProvid
           content: SingleChildScrollView(
             child: ListBody(
               children: <Widget>[
-                Center(child: Text('Se detectaron $cantidadCarasDetectadas caras')),
+                Center(child: cantidadCarasDetectadas == 1 ? Text('Se detectó $cantidadCarasDetectadas cara') : Text('Se detectaron $cantidadCarasDetectadas caras')),
                 Padding(
                     padding: EdgeInsets.only(top: 12.0),
                     child: Center(child: CircularProgressIndicator())
